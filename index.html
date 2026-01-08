@@ -15,9 +15,76 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         canvas { touch-action: none; } /* Prevent scrolling while dragging canvas */
+
+        /* Unboxing Animations */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .box-shake { animation: shake 0.5s; animation-iteration-count: 2; }
+        
+        @keyframes popOut {
+            0% { transform: scale(0) translateY(100px); opacity: 0; }
+            60% { transform: scale(1.1) translateY(-20px); opacity: 1; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .figure-pop { animation: popOut 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes confetti {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        .confetti-piece { position: absolute; width: 10px; height: 10px; animation: confetti 3s ease-out forwards; }
     </style>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 flex flex-col md:flex-row h-screen overflow-hidden">
+
+    <!-- UNBOXING OVERLAY -->
+    <div id="unboxing-overlay" class="fixed inset-0 z-50 bg-black/90 hidden flex flex-col items-center justify-center overflow-hidden">
+        
+        <!-- Stage 1: The Box -->
+        <div id="mystery-box" class="relative cursor-pointer transition-transform hover:scale-105">
+            <div class="w-64 h-64 bg-indigo-600 rounded-lg shadow-[0_0_50px_rgba(79,70,229,0.5)] flex items-center justify-center border-4 border-indigo-400">
+                <i data-lucide="package" class="text-white w-32 h-32"></i>
+                <div class="absolute inset-0 border-white/20 border-8 rounded-lg"></div>
+            </div>
+            <p class="text-white text-center mt-4 font-bold animate-pulse">Tap to Open</p>
+        </div>
+
+        <!-- Stage 2: The Reveal -->
+        <div id="reveal-stage" class="hidden flex-col items-center">
+            <div class="relative">
+                <!-- Light Burst Behind -->
+                <div class="absolute inset-0 bg-yellow-400 blur-3xl opacity-20 scale-150 animate-pulse rounded-full"></div>
+                <!-- The Figure Image -->
+                <img id="final-figure-img" class="relative z-10 w-80 h-80 object-contain figure-pop drop-shadow-[0_20px_50px_rgba(255,255,255,0.2)]">
+            </div>
+            
+            <div class="text-center mt-8 z-20 figure-pop" style="animation-delay: 0.5s">
+                <h2 class="text-4xl font-black text-white italic tracking-tighter mb-2" id="final-name-display">LEGEND!</h2>
+                <div class="flex gap-4 justify-center">
+                    <button onclick="app.downloadFinal()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform hover:scale-105 flex items-center gap-2">
+                        <i data-lucide="download" width="20"></i> Save to Collection
+                    </button>
+                    <button onclick="app.closeUnboxing()" class="bg-white/10 hover:bg-white/20 text-white font-bold py-3 px-6 rounded-full backdrop-blur-sm transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Confetti Container -->
+        <div id="confetti-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+    </div>
 
     <!-- LEFT COLUMN: Controls -->
     <div class="w-full md:w-1/2 lg:w-2/5 p-6 bg-white shadow-xl overflow-y-auto h-full border-r border-slate-200 z-10 flex flex-col">
@@ -92,6 +159,22 @@
                 <div class="flex gap-3 flex-wrap" id="skin-tone-container"></div>
             </div>
 
+            <!-- Hair Style -->
+            <div>
+                <label class="block text-slate-700 font-bold mb-3 flex items-center gap-2">
+                    <i data-lucide="scissors" width="20"></i> Hair Style
+                </label>
+                <div class="grid grid-cols-3 gap-2" id="hair-container"></div>
+            </div>
+
+            <!-- Accessories -->
+            <div>
+                <label class="block text-slate-700 font-bold mb-3 flex items-center gap-2">
+                    <i data-lucide="glasses" width="20"></i> Accessories
+                </label>
+                <div class="grid grid-cols-3 gap-2" id="acc-container"></div>
+            </div>
+
             <button onclick="app.setTab('jersey')" class="w-full py-4 bg-slate-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors">
                 Next Step <i data-lucide="chevron-right" width="18"></i>
             </button>
@@ -110,6 +193,17 @@
             <div>
                 <label class="block text-slate-700 font-bold mb-3">Select Team</label>
                 <div class="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar" id="team-list"></div>
+            </div>
+
+            <!-- Pose Selection -->
+            <div>
+                <label class="block text-slate-700 font-bold mb-3 flex items-center gap-2">
+                    <i data-lucide="activity" width="20"></i> Pose
+                </label>
+                <div class="grid grid-cols-2 gap-3" id="pose-buttons">
+                    <button onclick="state.pose='standing'; app.draw(); app.updateUI();" id="pose-standing" class="p-3 rounded-xl border-2 font-bold transition-all">Standing</button>
+                    <button onclick="state.pose='action'; app.draw(); app.updateUI();" id="pose-action" class="p-3 rounded-xl border-2 font-bold transition-all">Action</button>
+                </div>
             </div>
 
             <!-- Details -->
@@ -162,7 +256,7 @@
                 </button>
             </div>
 
-            <button onclick="app.handlePayment()" class="w-full py-5 bg-black text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-transform hover:scale-[1.02] shadow-lg shadow-slate-300">
+            <button onclick="app.startUnboxing()" class="w-full py-5 bg-black text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-transform hover:scale-[1.02] shadow-lg shadow-slate-300">
                 <i data-lucide="credit-card" width="20"></i> <span id="pay-btn-text">Pay & Order ($24.99)</span> <i data-lucide="lock" width="14" class="opacity-50"></i>
             </button>
 
@@ -198,6 +292,19 @@
     <script>
         // --- DATA ---
         const SKIN_TONES = ['#f5d0b0', '#e0ac69', '#c68642', '#8d5524', '#543621', '#3b2618'];
+        const HAIR_STYLES = [
+            { id: 'bald', label: 'Bald' },
+            { id: 'short', label: 'Short' },
+            { id: 'spiky', label: 'Spiky' },
+            { id: 'afro', label: 'Afro' },
+            { id: 'long', label: 'Long' }
+        ];
+        const ACCESSORIES = [
+            { id: 'none', label: 'None' },
+            { id: 'glasses', label: 'Glasses' },
+            { id: 'headband', label: 'Headband' }
+        ];
+
         const SPORTS = {
             basketball: {
                 label: 'NBA', jerseyStyle: 'sleeveless',
@@ -361,7 +468,12 @@
             
             // Dragging
             isDragging: false,
-            lastMousePos: {x: 0, y: 0}
+            lastMousePos: {x: 0, y: 0},
+
+            // New Features
+            hair: 'bald',
+            accessory: 'none',
+            pose: 'standing'
         };
 
         // --- CORE FUNCTIONS ---
@@ -371,6 +483,8 @@
                 app.renderTabs();
                 app.renderPresets();
                 app.renderSkinTones();
+                app.renderHairOptions();
+                app.renderAccessoryOptions();
                 app.renderSports();
                 app.renderTeams();
                 app.setupListeners();
@@ -439,6 +553,64 @@
                 app.draw(); // FORCE REDRAW
             },
 
+            // --- UNBOXING LOGIC ---
+            startUnboxing: () => {
+                const overlay = document.getElementById('unboxing-overlay');
+                const box = document.getElementById('mystery-box');
+                const reveal = document.getElementById('reveal-stage');
+                const finalName = document.getElementById('final-name-display');
+                
+                // Setup
+                overlay.classList.remove('hidden');
+                box.classList.remove('hidden');
+                reveal.classList.add('hidden');
+                finalName.innerText = state.name.toUpperCase();
+
+                // Generate image
+                app.setViewMode('figure'); // Force figure view for screenshot
+                const canvas = document.getElementById('main-canvas');
+                document.getElementById('final-figure-img').src = canvas.toDataURL();
+
+                // Click handler for box
+                box.onclick = () => {
+                    box.classList.add('box-shake');
+                    setTimeout(() => {
+                        box.classList.add('hidden');
+                        reveal.classList.remove('hidden');
+                        reveal.classList.add('flex');
+                        app.fireConfetti();
+                    }, 1000);
+                };
+            },
+
+            fireConfetti: () => {
+                const container = document.getElementById('confetti-container');
+                container.innerHTML = '';
+                const colors = ['#f43f5e', '#3b82f6', '#eab308', '#22c55e', '#a855f7'];
+                
+                for(let i=0; i<100; i++) {
+                    const el = document.createElement('div');
+                    el.className = 'confetti-piece';
+                    el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    el.style.left = Math.random() * 100 + 'vw';
+                    el.style.animationDuration = (Math.random() * 2 + 1) + 's';
+                    el.style.animationDelay = Math.random() * 0.5 + 's';
+                    container.appendChild(el);
+                }
+            },
+
+            downloadFinal: () => {
+                const canvas = document.getElementById('main-canvas');
+                const link = document.createElement('a');
+                link.download = `jersey-head-${state.name}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            },
+
+            closeUnboxing: () => {
+                document.getElementById('unboxing-overlay').classList.add('hidden');
+            },
+
             // --- UI RENDERING ---
             renderTabs: () => {
                 const tabs = ['presets', 'body', 'jersey', 'finish'];
@@ -504,6 +676,26 @@
                 }
             },
 
+            renderHairOptions: () => {
+                const container = document.getElementById('hair-container');
+                container.innerHTML = HAIR_STYLES.map(h => `
+                    <button onclick="state.hair = '${h.id}'; app.setCustomChange(); app.renderHairOptions(); app.draw();"
+                        class="py-2 px-3 text-sm font-bold border-2 rounded-lg transition-colors ${state.hair === h.id ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}">
+                        ${h.label}
+                    </button>
+                `).join('');
+            },
+
+            renderAccessoryOptions: () => {
+                const container = document.getElementById('acc-container');
+                container.innerHTML = ACCESSORIES.map(a => `
+                    <button onclick="state.accessory = '${a.id}'; app.setCustomChange(); app.renderAccessoryOptions(); app.draw();"
+                        class="py-2 px-3 text-sm font-bold border-2 rounded-lg transition-colors ${state.accessory === a.id ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}">
+                        ${a.label}
+                    </button>
+                `).join('');
+            },
+
             renderSports: () => {
                 const container = document.getElementById('sport-buttons');
                 container.innerHTML = Object.entries(SPORTS).map(([key, data]) => `
@@ -546,6 +738,17 @@
                 // Pricing
                 app.updatePricing();
 
+                // Pose Buttons
+                const pStand = document.getElementById('pose-standing');
+                const pAct = document.getElementById('pose-action');
+                if(state.pose === 'standing') {
+                    pStand.className = "p-3 rounded-xl border-2 font-bold transition-all border-indigo-600 bg-indigo-50 text-indigo-700";
+                    pAct.className = "p-3 rounded-xl border-2 font-bold transition-all border-slate-200 text-slate-500 hover:border-slate-300";
+                } else {
+                    pAct.className = "p-3 rounded-xl border-2 font-bold transition-all border-indigo-600 bg-indigo-50 text-indigo-700";
+                    pStand.className = "p-3 rounded-xl border-2 font-bold transition-all border-slate-200 text-slate-500 hover:border-slate-300";
+                }
+
                 // View Mode Buttons
                 const btnFig = document.getElementById('btn-view-figure');
                 const btnBox = document.getElementById('btn-view-box');
@@ -584,17 +787,6 @@
                 const lbl = document.getElementById('price-label');
                 lbl.innerText = label;
                 lbl.className = `font-bold px-3 py-1 rounded-full text-sm ${labelClass}`;
-            },
-
-            handlePayment: () => {
-                const price = state.isPreset ? 18.99 : 24.99;
-                alert(`Processing payment of $${price} for ${state.name} figure...`);
-                // Download logic
-                const canvas = document.getElementById('main-canvas');
-                const link = document.createElement('a');
-                link.download = `jersey-head-${state.name}.png`;
-                link.href = canvas.toDataURL();
-                link.click();
             },
 
             // --- IMAGE PROCESSING ---
@@ -648,7 +840,13 @@
                 canvas.height = height;
 
                 // Round Rect Helper
-                const roundRect = (x, y, w, h, r, color) => {
+                const roundRect = (x, y, w, h, r, color, rotateDeg = 0) => {
+                    ctx.save();
+                    if(rotateDeg !== 0) {
+                        ctx.translate(x + w/2, y + h/2);
+                        ctx.rotate(rotateDeg * Math.PI / 180);
+                        ctx.translate(-(x + w/2), -(y + h/2));
+                    }
                     ctx.beginPath();
                     ctx.moveTo(x + r, y);
                     ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -658,6 +856,7 @@
                     ctx.closePath();
                     ctx.fillStyle = color;
                     ctx.fill();
+                    ctx.restore();
                 };
 
                 const team = SPORTS[state.sport].teams[state.teamIndex];
@@ -676,7 +875,7 @@
                 ctx.ellipse(300, 500, 150, 40, 0, 0, Math.PI*2);
                 ctx.fill();
 
-                // BOX MODE
+                // BOX MODE BACKGROUND
                 if (state.viewMode === 'box') {
                     ctx.fillStyle = team.primary;
                     ctx.fillRect(50, 50, 500, 500);
@@ -684,21 +883,19 @@
                     roundRect(80, 100, 440, 350, 20, '#fff');
 
                     // --- BOX ACCESSORIES ---
-                    // Drawn BEHIND the figure (which comes next)
                     if (state.sport === 'basketball') {
                         // Backboard
                         ctx.fillStyle = '#eee';
                         ctx.fillRect(350, 120, 120, 80);
                         ctx.lineWidth = 3; ctx.strokeStyle = '#d00'; ctx.strokeRect(350, 120, 120, 80);
                         ctx.strokeRect(390, 170, 40, 30);
-                        // Hoop
                         ctx.beginPath(); ctx.moveTo(410, 200); ctx.lineTo(440, 200);
                         ctx.lineWidth = 4; ctx.strokeStyle = '#f00'; ctx.stroke();
                         // Ball on floor
                         ctx.beginPath(); ctx.arc(420, 400, 30, 0, Math.PI*2); ctx.fillStyle = '#cf5618'; ctx.fill();
                         ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke();
                     } else if (state.sport === 'football') {
-                        // Goal Post (Background)
+                        // Goal Post
                         ctx.strokeStyle = '#fe0'; ctx.lineWidth = 8;
                         ctx.beginPath();
                         ctx.moveTo(350, 120); ctx.lineTo(350, 250); 
@@ -710,12 +907,7 @@
                         ctx.beginPath(); ctx.ellipse(420, 420, 15, 25, 0, 0, Math.PI*2); ctx.fillStyle = '#593214'; ctx.fill();
                     } else if (state.sport === 'baseball') {
                         // Bat leaning
-                        ctx.save();
-                        ctx.translate(420, 350);
-                        ctx.rotate(0.2);
-                        ctx.fillStyle = '#d4a373';
-                        roundRect(0, 0, 15, 120, 5, '#d4a373');
-                        ctx.restore();
+                        ctx.save(); ctx.translate(420, 350); ctx.rotate(0.2); ctx.fillStyle = '#d4a373'; roundRect(0, 0, 15, 120, 5, '#d4a373'); ctx.restore();
                         // Ball
                         ctx.beginPath(); ctx.arc(380, 420, 15, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
                         ctx.strokeStyle = '#f00'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(380, 420, 10, -0.5, 1.5); ctx.stroke();
@@ -750,31 +942,51 @@
                 // Rotation Logic
                 const isBackView = state.rotation > 90 && state.rotation < 270;
 
-                // 1. LEGS
+                // --- POSE GEOMETRY ---
+                let legL_X=135, legL_Y=350, legL_Rot=0;
+                let legR_X=225, legR_Y=350, legR_Rot=0;
+                
+                // ACTION LEGS
+                if (state.pose === 'action') {
+                    if (state.sport === 'basketball') { // Jump/Spread
+                        legL_X=120; legL_Rot=10;
+                        legR_X=240; legR_Rot=-10;
+                    } else if (state.sport === 'football') { // Running
+                        legL_Y=330; legL_Rot=20; // High knee
+                    } else { // Baseball Stance
+                        legL_X=125; legR_X=235; // Wide stance
+                    }
+                }
+
+                // 1. LEGS DRAWING
                 const pantsColor = team.secondary === '#FFFFFF' ? '#333' : team.primary;
                 const shoeColor = '#111';
 
-                if (state.sport === 'basketball') {
-                    roundRect(135, 350, 40, 75, 10, state.skinTone);
-                    roundRect(225, 350, 40, 75, 10, state.skinTone);
-                    roundRect(135, 405, 40, 15, 4, '#ffffff');
-                    roundRect(225, 405, 40, 15, 4, '#ffffff');
-                    roundRect(125, 420, 60, 30, 8, shoeColor);
-                    roundRect(215, 420, 60, 30, 8, shoeColor);
-                    roundRect(125, 340, 60, 50, 10, pantsColor);
-                    roundRect(215, 340, 60, 50, 10, pantsColor);
-                } else if (state.sport === 'baseball') {
-                    const pantColor = '#e5e7eb';
-                    roundRect(130, 350, 50, 75, 10, pantColor);
-                    roundRect(220, 350, 50, 75, 10, pantColor);
-                    ctx.fillStyle = '#374151'; ctx.fillRect(130, 350, 140, 10); // Belt
-                    roundRect(125, 420, 60, 30, 8, shoeColor);
-                    roundRect(215, 420, 60, 30, 8, shoeColor);
-                } else {
-                    roundRect(130, 350, 50, 80, 10, pantsColor);
-                    roundRect(125, 420, 60, 30, 10, shoeColor);
-                    roundRect(220, 350, 50, 80, 10, pantsColor);
-                    roundRect(215, 420, 60, 30, 10, shoeColor);
+                // Helper for leg stack
+                const drawLeg = (x, y, rot, type) => {
+                    ctx.save();
+                    if(type === 'baseball') {
+                        const pantColor = '#e5e7eb';
+                        roundRect(x, y, 50, 75, 10, pantColor, rot);
+                        roundRect(x-5, y+70, 60, 30, 8, shoeColor, rot);
+                    } else if (type === 'basketball') {
+                        roundRect(x, y, 40, 75, 10, state.skinTone, rot);
+                        roundRect(x, y+55, 40, 15, 4, '#ffffff', rot); // Sock
+                        roundRect(x-10, y+70, 60, 30, 8, shoeColor, rot); // Shoe
+                        roundRect(x-10, y-10, 60, 50, 10, pantsColor, rot); // Shorts
+                    } else { // Football/Tight
+                        roundRect(x, y, 50, 80, 10, pantsColor, rot);
+                        roundRect(x-5, y+70, 60, 30, 10, shoeColor, rot);
+                    }
+                    ctx.restore();
+                }
+
+                drawLeg(legL_X, legL_Y, legL_Rot, state.sport);
+                drawLeg(legR_X, legR_Y, legR_Rot, state.sport);
+
+                // Belt for baseball
+                if (state.sport === 'baseball') {
+                    ctx.fillStyle = '#374151'; ctx.fillRect(130, 350, 140, 10);
                 }
 
                 // 2. TORSO
@@ -788,42 +1000,74 @@
                 ctx.fillStyle = state.skinTone;
                 ctx.fillRect(175, 230, 50, 30); // Neck
 
-                // Arms
-                if (sportStyle === 'sleeveless') {
-                    roundRect(90, 250, 40, 100, 20, state.skinTone);
-                    roundRect(270, 250, 40, 100, 20, state.skinTone);
-                    roundRect(90, 320, 40, 15, 5, accentColor);
-                    roundRect(270, 320, 40, 15, 5, accentColor);
-                } else if (sportStyle === 'shoulders') {
-                    roundRect(90, 250, 40, 100, 20, state.skinTone);
-                    roundRect(90, 250, 40, 60, 10, jerseyColor);
-                    roundRect(270, 250, 40, 100, 20, state.skinTone);
-                    roundRect(270, 250, 40, 60, 10, jerseyColor);
-                } else {
-                    roundRect(90, 250, 40, 100, 20, state.skinTone);
-                    roundRect(80, 250, 50, 40, 10, jerseyColor);
-                    roundRect(270, 250, 50, 40, 10, jerseyColor);
-                }
-                roundRect(90, 340, 40, 40, 20, state.skinTone); // Hands
-                roundRect(270, 340, 40, 40, 20, state.skinTone);
-
-                // Ball (Front only)
-                if (!isBackView) {
+                // --- ARMS DRAWING ---
+                let armLX=90, armLY=250, armLR=0; // Left
+                let armRX=270, armRY=250, armRR=0; // Right
+                
+                // Action Arm Poses
+                if (state.pose === 'action') {
                     if (state.sport === 'basketball') {
-                        ctx.beginPath(); ctx.arc(110, 360, 35, 0, Math.PI*2); ctx.fillStyle = '#cf5618'; ctx.fill();
-                        ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke();
-                        ctx.beginPath(); ctx.moveTo(75, 360); ctx.lineTo(145, 360); ctx.stroke();
-                        ctx.beginPath(); ctx.moveTo(110, 325); ctx.lineTo(110, 395); ctx.stroke();
-                    } else if (state.sport === 'baseball') {
-                        ctx.beginPath(); ctx.arc(160, 440, 20, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
-                        ctx.lineWidth = 1; ctx.strokeStyle = '#e0e0e0'; ctx.stroke();
-                        ctx.lineWidth = 2; ctx.strokeStyle = '#ff0000';
-                        ctx.beginPath(); ctx.arc(150, 440, 12, -0.5, 1.5); ctx.stroke();
-                        ctx.beginPath(); ctx.arc(170, 440, 12, Math.PI-0.5, Math.PI+1.5); ctx.stroke();
+                        // Dunking: Left out, Right High up
+                        armLR = 45; armLX = 70;
+                        armRR = 180; armRX = 290; armRY = 200; 
                     } else if (state.sport === 'football') {
-                        ctx.beginPath(); ctx.ellipse(290, 360, 25, 40, Math.PI/4, 0, 2*Math.PI); ctx.fillStyle = '#593214'; ctx.fill();
-                        ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.moveTo(280, 350); ctx.lineTo(300, 370); ctx.stroke();
+                        // Heisman: Left Stiff arm, Right Tuck
+                        armLR = 90; armLX = 60; armLY = 260;
+                        armRR = -45; armRX = 250; armRY = 250;
+                    } else {
+                        // Batting: Both arms across chest
+                        armLR = -30; armLX = 110; armLY = 260;
+                        armRR = 30; armRX = 250; armRY = 260;
                     }
+                }
+
+                const drawArm = (x, y, rot) => {
+                    ctx.save();
+                    // Rotate around shoulder point roughly
+                    ctx.translate(x + 20, y + 20); 
+                    ctx.rotate(rot * Math.PI/180);
+                    ctx.translate(-(x+20), -(y+20));
+
+                    if (sportStyle === 'sleeveless') {
+                        roundRect(x, y, 40, 100, 20, state.skinTone);
+                        roundRect(x, y+70, 40, 15, 5, accentColor);
+                    } else if (sportStyle === 'shoulders') {
+                        roundRect(x, y, 40, 100, 20, state.skinTone);
+                        roundRect(x, y, 40, 60, 10, jerseyColor);
+                    } else {
+                        roundRect(x, y, 40, 100, 20, state.skinTone);
+                        roundRect(x-10, y, 50, 40, 10, jerseyColor);
+                    }
+                    roundRect(x, y+90, 40, 40, 20, state.skinTone); // Hand
+                    ctx.restore();
+                }
+
+                drawArm(armLX, armLY, armLR);
+                // Draw Ball/Bat BEHIND right arm if needed, or in front?
+                // Complex layering for baseball bat...
+                if (!isBackView && state.pose === 'action' && state.sport === 'baseball') {
+                     ctx.save();
+                     ctx.translate(220, 250);
+                     ctx.rotate(-0.5);
+                     ctx.fillStyle = '#d4a373';
+                     roundRect(0, -80, 15, 140, 5, '#d4a373'); // Bat
+                     ctx.restore();
+                }
+
+                drawArm(armRX, armRY, armRR);
+
+                // HELD ITEMS
+                if (!isBackView && state.pose === 'action') {
+                     if (state.sport === 'basketball') {
+                        // Ball in Right Hand (High)
+                        ctx.beginPath(); ctx.arc(290, 130, 35, 0, Math.PI*2); ctx.fillStyle = '#cf5618'; ctx.fill(); 
+                        ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke();
+                     } else if (state.sport === 'football') {
+                        // Ball tucked in Right Arm
+                        ctx.save(); ctx.translate(270, 300); ctx.rotate(0.5);
+                        ctx.beginPath(); ctx.ellipse(0, 0, 18, 30, 0, 0, 2*Math.PI); ctx.fillStyle = '#593214'; ctx.fill();
+                        ctx.restore();
+                     }
                 }
 
                 // JERSEY TEXT
@@ -857,6 +1101,26 @@
                 const spherePath = new Path2D();
                 spherePath.arc(centerX, centerY, headSize/2, 0, Math.PI*2);
                 
+                // BACK HAIR DRAWING
+                let hairOffset = 0;
+                if (state.rotation < 90) hairOffset = state.rotation * 0.2; // Parallax
+                if (state.rotation > 270) hairOffset = (state.rotation - 360) * 0.2;
+
+                if (state.hair !== 'bald') {
+                    ctx.fillStyle = '#111'; 
+                    // Long Hair (Back)
+                    if (state.hair === 'long') {
+                        ctx.beginPath();
+                        ctx.moveTo(headX + 20 + hairOffset, headY + 100);
+                        ctx.quadraticCurveTo(centerX + hairOffset, headY + 250, headX + headSize - 20 + hairOffset, headY + 100);
+                        ctx.fill();
+                    }
+                    // Afro (Back volume)
+                    if (state.hair === 'afro') {
+                        ctx.beginPath(); ctx.arc(centerX + hairOffset, centerY, headSize/1.7, 0, Math.PI*2); ctx.fill();
+                    }
+                }
+
                 // Sphere Base
                 const sphereGrad = ctx.createRadialGradient(centerX - 40, centerY - 40, 20, centerX, centerY, headSize/2);
                 sphereGrad.addColorStop(0, state.skinTone);
@@ -877,11 +1141,10 @@
                             ctx.translate(centerX + state.facePos.x, centerY + state.facePos.y);
                             ctx.scale(finalScale, finalScale);
                             
-                            // --- SCULPTED EFFECT ---
+                            // SCULPTED EFFECT
                             ctx.filter = 'grayscale(100%) contrast(1.5) brightness(1.1)';
                             ctx.globalCompositeOperation = 'hard-light'; 
                             ctx.globalAlpha = 0.6; 
-
                             ctx.drawImage(img, -img.width/2, -img.height/2);
                             ctx.restore();
                         }
@@ -907,17 +1170,10 @@
 
                         // Nose
                         ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                        ctx.beginPath();
-                        ctx.arc(centerX + eyeOffsetX, centerY + 25, 4, 0, Math.PI*2);
-                        ctx.fill();
-
+                        ctx.beginPath(); ctx.arc(centerX + eyeOffsetX, centerY + 25, 4, 0, Math.PI*2); ctx.fill();
                         // Smile
-                        ctx.strokeStyle = '#000';
-                        ctx.lineWidth = 3;
-                        ctx.lineCap = 'round';
-                        ctx.beginPath();
-                        ctx.arc(centerX + eyeOffsetX, centerY + 30, 20, 0.2 * Math.PI, 0.8 * Math.PI);
-                        ctx.stroke();
+                        ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+                        ctx.beginPath(); ctx.arc(centerX + eyeOffsetX, centerY + 30, 20, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
                     }
                 }
 
@@ -928,6 +1184,63 @@
                 overlayGrad.addColorStop(1, 'rgba(0,0,0,0.3)');
                 ctx.fillStyle = overlayGrad;
                 ctx.fill(spherePath);
+
+                // FRONT HAIR & ACCESSORIES
+                // We use the same offset as the face to make it rotate
+                let featOffset = 0;
+                if (state.rotation < 90) featOffset = state.rotation * 0.5;
+                if (state.rotation > 270) featOffset = (state.rotation - 360) * 0.5;
+
+                if (!isBackView) {
+                    ctx.fillStyle = '#111'; // Black hair
+                    
+                    if (state.hair === 'spiky') {
+                        ctx.beginPath();
+                        for(let i=0; i<7; i++) {
+                            const spikeX = headX + 20 + (i*28) + featOffset;
+                            const spikeY = headY + 30 - Math.abs(i-3)*5; // Curve up
+                            ctx.lineTo(spikeX, spikeY);
+                            ctx.lineTo(spikeX + 14, spikeY - 30);
+                        }
+                        ctx.lineTo(headX + headSize - 20 + featOffset, headY + 50);
+                        ctx.fill();
+                    }
+                    else if (state.hair === 'short') {
+                        ctx.beginPath();
+                        ctx.ellipse(centerX + featOffset, headY + 25, headSize/2.2, 35, 0, Math.PI, 0); 
+                        ctx.fill();
+                        // Sideburns
+                        ctx.fillRect(headX + 10 + featOffset, headY + 25, 20, 60);
+                        ctx.fillRect(headX + headSize - 30 + featOffset, headY + 25, 20, 60);
+                    }
+                    else if (state.hair === 'afro') {
+                        // Front texture
+                        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                        ctx.beginPath(); 
+                        ctx.arc(centerX + featOffset, headY, 60, 0, Math.PI); 
+                        ctx.fill();
+                    }
+                    
+                    // Headband
+                    if (state.accessory === 'headband') {
+                        ctx.fillStyle = team.secondary;
+                        // Curved headband
+                        ctx.beginPath();
+                        ctx.ellipse(centerX + featOffset, headY + 45, headSize/2.05, 30, 0, 0, Math.PI*2);
+                        ctx.fill();
+                        // Cut top half (lazy mask)
+                        ctx.globalCompositeOperation = 'destination-out';
+                        ctx.beginPath(); ctx.rect(0, 0, width, headY+30); ctx.fill();
+                        ctx.globalCompositeOperation = 'source-over';
+                    }
+                    // Glasses
+                    if (state.accessory === 'glasses') {
+                        ctx.lineWidth = 4; ctx.strokeStyle = '#333'; ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                        ctx.beginPath(); ctx.arc(centerX - 40 + featOffset, centerY + 10, 25, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(centerX + 40 + featOffset, centerY + 10, 25, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(centerX - 15 + featOffset, centerY+10); ctx.lineTo(centerX + 15 + featOffset, centerY+10); ctx.stroke();
+                    }
+                }
 
                 ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.stroke(spherePath);
 

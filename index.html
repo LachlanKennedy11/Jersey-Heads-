@@ -1,1 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jersey Head</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom scrollbar to match original */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        canvas { touch-action: none; } /* Prevent scrolling while dragging canvas */
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 flex flex-col md:flex-row h-screen overflow-hidden">
 
+    <!-- LEFT COLUMN: Controls -->
+    <div class="w-full md:w-1/2 lg:w-2/5 p-6 bg-white shadow-xl overflow-y-auto h-full border-r border-slate-200 z-10 flex flex-col">
+        <header class="mb-8">
+            <h1 class="text-4xl font-black tracking-tighter text-indigo-600 mb-2">Jersey Head</h1>
+            <p class="text-slate-500 font-medium">Create your custom collectible figure.</p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="flex space-x-2 mb-8 border-b border-slate-200 pb-1" id="tabs-container">
+            <!-- Tabs injected by JS -->
+        </div>
+
+        <!-- TAB CONTENT AREAS -->
+        <div id="content-presets" class="hidden space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div class="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                <h3 class="text-indigo-900 font-bold mb-2 flex items-center gap-2">
+                    <i data-lucide="star" class="fill-indigo-500 text-indigo-600" width="20"></i>
+                    Quick Start: Famous Players
+                </h3>
+                <p class="text-sm text-indigo-700/70 mb-4">
+                    Starting with a preset costs <span class="font-black text-green-600">$18.99</span>. Customizing it changes the price to <span class="font-bold">$24.99</span>.
+                </p>
+                <div id="presets-list" class="space-y-6"></div>
+            </div>
+        </div>
+
+        <div id="content-body" class="hidden space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <!-- Upload -->
+            <div class="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                <label class="block text-indigo-900 font-bold mb-3 flex items-center gap-2">
+                    <i data-lucide="camera" width="20"></i> Face Photo
+                </label>
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="relative w-20 h-20 rounded-xl overflow-hidden bg-slate-200 border-2 border-dashed border-indigo-300 flex items-center justify-center group shrink-0">
+                        <img id="preview-thumb" class="w-full h-full object-cover hidden">
+                        <i id="preview-icon" data-lucide="user" class="text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
+                        <input type="file" id="file-upload" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-xs text-indigo-600/70 mb-2">Upload a photo. We'll scan it to match your skin tone.</p>
+                        <label class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg cursor-pointer hover:bg-indigo-700 transition-colors shadow-sm">
+                            <i data-lucide="upload" width="16"></i> Choose File
+                            <input type="file" id="btn-upload" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Controls shown only when image exists -->
+                <div id="image-controls" class="hidden bg-white p-4 rounded-lg border border-indigo-100 space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><i data-lucide="zoom-in" width="14"></i> Zoom Face</span>
+                        </div>
+                        <input type="range" id="zoom-slider" min="1" max="3" step="0.1" value="1" class="w-full accent-indigo-600">
+                    </div>
+                    <div class="pt-2 border-t border-slate-100">
+                         <div class="flex items-center justify-between mb-1">
+                           <span class="text-xs font-bold text-slate-500 uppercase flex items-center gap-1"><i data-lucide="wand-2" width="14"></i> Magic Eraser</span>
+                           <span id="tolerance-label" class="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500">Off</span>
+                        </div>
+                        <input type="range" id="tolerance-slider" min="0" max="60" step="1" value="0" class="w-full accent-purple-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skin Tone -->
+            <div>
+                <label class="block text-slate-700 font-bold mb-3 flex items-center gap-2">
+                    <i data-lucide="palette" width="20"></i> Skin Tone
+                </label>
+                <div class="flex gap-3 flex-wrap" id="skin-tone-container"></div>
+            </div>
+
+            <button onclick="app.setTab('jersey')" class="w-full py-4 bg-slate-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors">
+                Next Step <i data-lucide="chevron-right" width="18"></i>
+            </button>
+        </div>
+
+        <div id="content-jersey" class="hidden space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <!-- Sport Selection -->
+             <div>
+                <label class="block text-slate-700 font-bold mb-3 flex items-center gap-2">
+                  <i data-lucide="trophy" width="20"></i> Choose Sport
+                </label>
+                <div class="grid grid-cols-3 gap-3" id="sport-buttons"></div>
+            </div>
+
+            <!-- Team Selection -->
+            <div>
+                <label class="block text-slate-700 font-bold mb-3">Select Team</label>
+                <div class="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar" id="team-list"></div>
+            </div>
+
+            <!-- Details -->
+            <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <div class="flex items-center justify-between mb-4">
+                  <label class="text-slate-700 font-bold flex items-center gap-2">
+                    <i data-lucide="shirt" width="20"></i> Jersey Details
+                  </label>
+                </div>
+                <div class="space-y-4">
+                  <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">Player Name</label>
+                    <input type="text" id="input-name" maxlength="12" class="w-full mt-1 p-3 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none font-bold text-slate-800 uppercase">
+                  </div>
+                  <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase">Number</label>
+                    <input type="number" id="input-number" class="w-full mt-1 p-3 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none font-bold text-slate-800">
+                  </div>
+                </div>
+            </div>
+
+            <button onclick="app.setTab('finish')" class="w-full py-4 bg-slate-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors">
+                Finish Design <i data-lucide="chevron-right" width="18"></i>
+            </button>
+        </div>
+
+        <div id="content-finish" class="hidden space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div class="text-center py-6">
+                <h3 class="text-2xl font-bold text-slate-800 mb-2">Checkout</h3>
+                <p class="text-slate-500">Review your final design and price.</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6">
+                <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+                    <span class="text-slate-500 font-bold">Item Type</span>
+                    <span id="price-label" class="font-bold px-3 py-1 rounded-full text-sm bg-indigo-100 text-indigo-700">Custom Design</span>
+                </div>
+                <div class="flex justify-between items-end">
+                    <span class="text-slate-800 font-black text-lg">Total</span>
+                    <span id="price-total" class="text-4xl font-black text-slate-900">$24.99</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="app.setViewMode('figure')" id="btn-view-figure" class="p-4 rounded-xl border-2 font-bold transition-all flex flex-col items-center gap-2 border-indigo-600 bg-indigo-50 text-indigo-700">
+                    <i data-lucide="user" width="24"></i> Figure View
+                </button>
+                <button onclick="app.setViewMode('box')" id="btn-view-box" class="p-4 rounded-xl border-2 font-bold transition-all flex flex-col items-center gap-2 border-slate-200 text-slate-500">
+                    <i data-lucide="box" width="24"></i> Box View
+                </button>
+            </div>
+
+            <button onclick="app.handlePayment()" class="w-full py-5 bg-black text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-transform hover:scale-[1.02] shadow-lg shadow-slate-300">
+                <i data-lucide="credit-card" width="20"></i> <span id="pay-btn-text">Pay & Order ($24.99)</span> <i data-lucide="lock" width="14" class="opacity-50"></i>
+            </button>
+
+            <button onclick="app.setTab('body')" class="w-full py-3 text-slate-400 font-bold hover:text-slate-600 text-sm">Keep Editing</button>
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Preview -->
+    <div class="w-full md:w-1/2 lg:w-3/5 bg-slate-900 flex items-center justify-center p-4 md:p-10 relative overflow-hidden select-none" id="preview-area">
+        
+        <div class="relative z-10 flex flex-col items-center">
+            <!-- Mode Toggle Overlay -->
+            <div class="absolute top-4 right-4 z-20 flex bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20">
+                <button id="mode-face" onclick="app.setInteractionMode('face')" class="p-2 rounded-full transition-colors text-white/60 hover:text-white hidden" title="Move Face">
+                    <i data-lucide="mouse-pointer-2" width="18"></i>
+                </button>
+                <button id="mode-rotate" onclick="app.setInteractionMode('rotate')" class="p-2 rounded-full transition-colors bg-indigo-600 text-white" title="Rotate Figure">
+                    <i data-lucide="rotate-3d" width="18"></i>
+                </button>
+            </div>
+
+            <div class="bg-slate-800 p-2 rounded-3xl shadow-2xl shadow-black/50 border-4 border-slate-700 cursor-grab active:cursor-grabbing" id="canvas-container">
+                <canvas id="main-canvas" style="max-height: 70vh; width: 500px; max-width: 100%;" class="rounded-2xl bg-slate-900"></canvas>
+            </div>
+            
+            <p class="mt-6 text-slate-400 font-bold tracking-widest text-sm uppercase opacity-70 flex items-center gap-2">
+                <i data-lucide="move" width="14"></i> <span id="swipe-instruction">Swipe to Rotate View</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- MAIN APP LOGIC -->
+    <script>
+        // --- DATA ---
+        const SKIN_TONES = ['#f5d0b0', '#e0ac69', '#c68642', '#8d5524', '#543621', '#3b2618'];
+        const SPORTS = {
+            basketball: {
+                label: 'NBA', jerseyStyle: 'sleeveless',
+                teams: [
+                    { id: 'nba1', name: 'Hawks', primary: '#E03A3E', secondary: '#C1D32F' },
+                    { id: 'nba2', name: 'Celtics', primary: '#007A33', secondary: '#BA9653' },
+                    { id: 'nba3', name: 'Nets', primary: '#000000', secondary: '#FFFFFF' },
+                    { id: 'nba4', name: 'Hornets', primary: '#1D1160', secondary: '#00788C' },
+                    { id: 'nba5', name: 'Bulls', primary: '#CE1141', secondary: '#000000' },
+                    { id: 'nba6', name: 'Cavaliers', primary: '#860038', secondary: '#FDBB30' },
+                    { id: 'nba7', name: 'Mavericks', primary: '#00538C', secondary: '#B8C4CA' },
+                    { id: 'nba8', name: 'Nuggets', primary: '#0E2240', secondary: '#FEC524' },
+                    { id: 'nba9', name: 'Pistons', primary: '#1D428A', secondary: '#C8102E' },
+                    { id: 'nba10', name: 'Warriors', primary: '#1D428A', secondary: '#FFC72C' },
+                    { id: 'nba11', name: 'Rockets', primary: '#CE1141', secondary: '#000000' },
+                    { id: 'nba12', name: 'Pacers', primary: '#002D62', secondary: '#FDBB30' },
+                    { id: 'nba13', name: 'Clippers', primary: '#C8102E', secondary: '#1D428A' },
+                    { id: 'nba14', name: 'Lakers', primary: '#552583', secondary: '#FDB927' },
+                    { id: 'nba15', name: 'Grizzlies', primary: '#5D76A9', secondary: '#12173F' },
+                    { id: 'nba16', name: 'Heat', primary: '#98002E', secondary: '#F9A01B' },
+                    { id: 'nba17', name: 'Bucks', primary: '#00471B', secondary: '#EEE1C6' },
+                    { id: 'nba18', name: 'Wolves', primary: '#0C2340', secondary: '#236192' },
+                    { id: 'nba19', name: 'Pelicans', primary: '#0C2340', secondary: '#C8102E' },
+                    { id: 'nba20', name: 'Knicks', primary: '#006BB6', secondary: '#F58426' },
+                    { id: 'nba21', name: 'Thunder', primary: '#007AC1', secondary: '#EF3B24' },
+                    { id: 'nba22', name: 'Magic', primary: '#0077C0', secondary: '#C4CED4' },
+                    { id: 'nba23', name: '76ers', primary: '#006BB6', secondary: '#ED174C' },
+                    { id: 'nba24', name: 'Suns', primary: '#1D1160', secondary: '#E56020' },
+                    { id: 'nba25', name: 'Blazers', primary: '#000000', secondary: '#E03A3E' },
+                    { id: 'nba26', name: 'Kings', primary: '#5A2D81', secondary: '#63727A' },
+                    { id: 'nba27', name: 'Spurs', primary: '#000000', secondary: '#C4CED4' },
+                    { id: 'nba28', name: 'Raptors', primary: '#CE1141', secondary: '#000000' },
+                    { id: 'nba29', name: 'Jazz', primary: '#002B5C', secondary: '#FFF21F' },
+                    { id: 'nba30', name: 'Wizards', primary: '#002B5C', secondary: '#E31837' },
+                ]
+            },
+            football: {
+                label: 'NFL', jerseyStyle: 'shoulders',
+                teams: [
+                    { id: 'nfl1', name: 'Cardinals', primary: '#97233F', secondary: '#000000' },
+                    { id: 'nfl2', name: 'Falcons', primary: '#A71930', secondary: '#000000' },
+                    { id: 'nfl3', name: 'Ravens', primary: '#241773', secondary: '#9E7C0C' },
+                    { id: 'nfl4', name: 'Bills', primary: '#00338D', secondary: '#C60C30' },
+                    { id: 'nfl5', name: 'Panthers', primary: '#0085CA', secondary: '#101820' },
+                    { id: 'nfl6', name: 'Bears', primary: '#0B162A', secondary: '#C83803' },
+                    { id: 'nfl7', name: 'Bengals', primary: '#FB4F14', secondary: '#000000' },
+                    { id: 'nfl8', name: 'Browns', primary: '#311D00', secondary: '#FF3C00' },
+                    { id: 'nfl9', name: 'Cowboys', primary: '#003594', secondary: '#869397' },
+                    { id: 'nfl10', name: 'Broncos', primary: '#FB4F14', secondary: '#002244' },
+                    { id: 'nfl11', name: 'Lions', primary: '#0076B6', secondary: '#B0B7BC' },
+                    { id: 'nfl12', name: 'Packers', primary: '#203731', secondary: '#FFB612' },
+                    { id: 'nfl13', name: 'Texans', primary: '#03202F', secondary: '#A71930' },
+                    { id: 'nfl14', name: 'Colts', primary: '#002C5F', secondary: '#FFFFFF' },
+                    { id: 'nfl15', name: 'Jaguars', primary: '#006778', secondary: '#D7A22A' },
+                    { id: 'nfl16', name: 'Chiefs', primary: '#E31837', secondary: '#FFB81C' },
+                    { id: 'nfl17', name: 'Raiders', primary: '#000000', secondary: '#A5ACAF' },
+                    { id: 'nfl18', name: 'Chargers', primary: '#0080C6', secondary: '#FFC20E' },
+                    { id: 'nfl19', name: 'Rams', primary: '#003594', secondary: '#FFA300' },
+                    { id: 'nfl20', name: 'Dolphins', primary: '#008E97', secondary: '#FC4C02' },
+                    { id: 'nfl21', name: 'Vikings', primary: '#4F2683', secondary: '#FFC62F' },
+                    { id: 'nfl22', name: 'Patriots', primary: '#002244', secondary: '#C60C30' },
+                    { id: 'nfl23', name: 'Saints', primary: '#D3BC8D', secondary: '#101820' },
+                    { id: 'nfl24', name: 'Giants', primary: '#002466', secondary: '#A71930' },
+                    { id: 'nfl25', name: 'Jets', primary: '#125740', secondary: '#FFFFFF' },
+                    { id: 'nfl26', name: 'Eagles', primary: '#004C54', secondary: '#A5ACAF' },
+                    { id: 'nfl27', name: 'Steelers', primary: '#101820', secondary: '#FFB612' },
+                    { id: 'nfl28', name: '49ers', primary: '#AA0000', secondary: '#B3995D' },
+                    { id: 'nfl29', name: 'Seahawks', primary: '#002244', secondary: '#69BE28' },
+                    { id: 'nfl30', name: 'Bucs', primary: '#D50A0A', secondary: '#FF7900' },
+                    { id: 'nfl31', name: 'Titans', primary: '#0C2340', secondary: '#4B92DB' },
+                    { id: 'nfl32', name: 'Commanders', primary: '#5A1414', secondary: '#FFB612' },
+                ]
+            },
+            baseball: {
+                label: 'MLB', jerseyStyle: 'tshirt',
+                teams: [
+                    { id: 'mlb1', name: 'D-backs', primary: '#A71930', secondary: '#E3D4AD' },
+                    { id: 'mlb2', name: 'Braves', primary: '#13274F', secondary: '#CE1141' },
+                    { id: 'mlb3', name: 'Orioles', primary: '#DF4601', secondary: '#000000' },
+                    { id: 'mlb4', name: 'Red Sox', primary: '#BD3039', secondary: '#0C2340' },
+                    { id: 'mlb5', name: 'Cubs', primary: '#0E3386', secondary: '#CC3433' },
+                    { id: 'mlb6', name: 'White Sox', primary: '#27251F', secondary: '#C4CED4' },
+                    { id: 'mlb7', name: 'Reds', primary: '#C6011F', secondary: '#000000' },
+                    { id: 'mlb8', name: 'Guardians', primary: '#00385D', secondary: '#E50022' },
+                    { id: 'mlb9', name: 'Rockies', primary: '#333366', secondary: '#C4CED4' },
+                    { id: 'mlb10', name: 'Tigers', primary: '#0C2340', secondary: '#FA4616' },
+                    { id: 'mlb11', name: 'Astros', primary: '#002D62', secondary: '#EB6E1F' },
+                    { id: 'mlb12', name: 'Royals', primary: '#004687', secondary: '#BD9B60' },
+                    { id: 'mlb13', name: 'Angels', primary: '#BA0021', secondary: '#003263' },
+                    { id: 'mlb14', name: 'Dodgers', primary: '#005A9C', secondary: '#A5ACAF' },
+                    { id: 'mlb15', name: 'Marlins', primary: '#00A3E0', secondary: '#EF3340' },
+                    { id: 'mlb16', name: 'Brewers', primary: '#FFC52F', secondary: '#12284B' },
+                    { id: 'mlb17', name: 'Twins', primary: '#002B5C', secondary: '#D31145' },
+                    { id: 'mlb18', name: 'Mets', primary: '#002D72', secondary: '#FF5910' },
+                    { id: 'mlb19', name: 'Yankees', primary: '#003087', secondary: '#E4002C' },
+                    { id: 'mlb20', name: 'Athletics', primary: '#003831', secondary: '#EFB21E' },
+                    { id: 'mlb21', name: 'Phillies', primary: '#E81828', secondary: '#002D72' },
+                    { id: 'mlb22', name: 'Pirates', primary: '#27251F', secondary: '#FDB827' },
+                    { id: 'mlb23', name: 'Padres', primary: '#2F241D', secondary: '#FFC425' },
+                    { id: 'mlb24', name: 'Giants', primary: '#FD5A1E', secondary: '#27251F' },
+                    { id: 'mlb25', name: 'Mariners', primary: '#0C2C56', secondary: '#005C5C' },
+                    { id: 'mlb26', name: 'Cardinals', primary: '#C41E3A', secondary: '#0C2340' },
+                    { id: 'mlb27', name: 'Rays', primary: '#092C5C', secondary: '#8FBCE6' },
+                    { id: 'mlb28', name: 'Rangers', primary: '#003278', secondary: '#C0111F' },
+                    { id: 'mlb29', name: 'Blue Jays', primary: '#134A8E', secondary: '#1D2D5C' },
+                    { id: 'mlb30', name: 'Nationals', primary: '#AB0003', secondary: '#14225A' },
+                ]
+            }
+        };
+
+        const PRESETS = [
+            // BASKETBALL (Originals)
+            { sport: 'basketball', teamId: 'nba14', name: 'James', number: '23', skinTone: SKIN_TONES[4], label: 'The King' },
+            { sport: 'basketball', teamId: 'nba10', name: 'Curry', number: '30', skinTone: SKIN_TONES[1], label: 'Chef Curry' },
+            { sport: 'basketball', teamId: 'nba8', name: 'Jokic', number: '15', skinTone: SKIN_TONES[0], label: 'The Joker' },
+            // BASKETBALL (Legends)
+            { sport: 'basketball', teamId: 'nba5', name: 'Jordan', number: '23', skinTone: SKIN_TONES[3], label: 'His Airness' },
+            { sport: 'basketball', teamId: 'nba14', name: 'Bryant', number: '24', skinTone: SKIN_TONES[3], label: 'Mamba' },
+            { sport: 'basketball', teamId: 'nba2', name: 'Bird', number: '33', skinTone: SKIN_TONES[0], label: 'Legend' },
+
+            // FOOTBALL (Originals)
+            { sport: 'football', teamId: 'nfl16', name: 'Mahomes', number: '15', skinTone: SKIN_TONES[2], label: 'Showtime' },
+            { sport: 'football', teamId: 'nfl3', name: 'Jackson', number: '8', skinTone: SKIN_TONES[4], label: 'Action Jackson' },
+            { sport: 'football', teamId: 'nfl21', name: 'Jefferson', number: '18', skinTone: SKIN_TONES[3], label: 'JJettas' },
+            // FOOTBALL (Legends)
+            { sport: 'football', teamId: 'nfl22', name: 'Brady', number: '12', skinTone: SKIN_TONES[0], label: 'GOAT' },
+            { sport: 'football', teamId: 'nfl28', name: 'Rice', number: '80', skinTone: SKIN_TONES[4], label: 'Flash' },
+            { sport: 'football', teamId: 'nfl9', name: 'Smith', number: '22', skinTone: SKIN_TONES[3], label: 'All Time' },
+
+            // BASEBALL (Originals)
+            { sport: 'baseball', teamId: 'mlb14', name: 'Ohtani', number: '17', skinTone: SKIN_TONES[1], label: 'Shotime' },
+            { sport: 'baseball', teamId: 'mlb19', name: 'Judge', number: '99', skinTone: SKIN_TONES[3], label: 'All Rise' },
+            { sport: 'baseball', teamId: 'mlb21', name: 'Harper', number: '3', skinTone: SKIN_TONES[0], label: 'Bryce' },
+            // BASEBALL (Legends)
+            { sport: 'baseball', teamId: 'mlb19', name: 'Ruth', number: '3', skinTone: SKIN_TONES[0], label: 'Bambino' },
+            { sport: 'baseball', teamId: 'mlb14', name: 'Robinson', number: '42', skinTone: SKIN_TONES[4], label: 'Legend' },
+            { sport: 'baseball', teamId: 'mlb25', name: 'Griffey', number: '24', skinTone: SKIN_TONES[3], label: 'The Kid' }
+        ];
+
+        // --- APP STATE ---
+        const state = {
+            activeTab: 'presets',
+            sport: 'basketball',
+            teamIndex: 0,
+            skinTone: SKIN_TONES[1],
+            name: 'YOUR NAME',
+            number: '10',
+            viewMode: 'figure', // figure, box
+            isPreset: false,
+            
+            // Image Data
+            originalImage: null,
+            processedImage: null,
+            
+            // Interaction
+            interactionMode: 'rotate', // rotate, face
+            rotation: 0,
+            faceZoom: 1,
+            facePos: {x: 0, y: 0},
+            bgTolerance: 0,
+            
+            // Dragging
+            isDragging: false,
+            lastMousePos: {x: 0, y: 0}
+        };
+
+        // --- CORE FUNCTIONS ---
+        const app = {
+            init: () => {
+                lucide.createIcons();
+                app.renderTabs();
+                app.renderPresets();
+                app.renderSkinTones();
+                app.renderSports();
+                app.renderTeams();
+                app.setupListeners();
+                app.updateUI();
+                requestAnimationFrame(app.draw);
+            },
+
+            setTab: (tabName) => {
+                state.activeTab = tabName;
+                // Auto switch interaction
+                if (tabName === 'body') app.setInteractionMode('face');
+                else app.setInteractionMode('rotate');
+                app.renderTabs();
+                app.updateUI();
+            },
+
+            setInteractionMode: (mode) => {
+                state.interactionMode = mode;
+                // Update UI buttons
+                const btnFace = document.getElementById('mode-face');
+                const btnRotate = document.getElementById('mode-rotate');
+                
+                if(mode === 'face') {
+                    btnFace.className = "p-2 rounded-full transition-colors bg-indigo-600 text-white";
+                    btnRotate.className = "p-2 rounded-full transition-colors text-white/60 hover:text-white";
+                    document.getElementById('swipe-instruction').innerText = "Swipe to Move Face";
+                } else {
+                    btnFace.className = "p-2 rounded-full transition-colors text-white/60 hover:text-white";
+                    btnRotate.className = "p-2 rounded-full transition-colors bg-indigo-600 text-white";
+                    document.getElementById('swipe-instruction').innerText = "Swipe to Rotate View";
+                }
+            },
+
+            setViewMode: (mode) => {
+                state.viewMode = mode;
+                app.updateUI(); // Updates button styles
+                app.draw();
+            },
+
+            setCustomChange: () => {
+                state.isPreset = false;
+                app.updatePricing();
+            },
+
+            loadPreset: (preset) => {
+                state.sport = preset.sport;
+                state.name = preset.name;
+                state.number = preset.number;
+                state.skinTone = preset.skinTone;
+                state.isPreset = true;
+                state.originalImage = null; // Reset image for presets
+                state.processedImage = null;
+                
+                // Find team index
+                const teams = SPORTS[state.sport].teams;
+                state.teamIndex = teams.findIndex(t => t.id === preset.teamId);
+                if (state.teamIndex === -1) state.teamIndex = 0;
+
+                app.renderSports();
+                app.renderTeams();
+                app.renderSkinTones();
+                document.getElementById('input-name').value = state.name;
+                document.getElementById('input-number').value = state.number;
+                
+                app.setTab('body');
+                app.draw(); // FORCE REDRAW
+            },
+
+            // --- UI RENDERING ---
+            renderTabs: () => {
+                const tabs = ['presets', 'body', 'jersey', 'finish'];
+                const container = document.getElementById('tabs-container');
+                container.innerHTML = tabs.map(t => `
+                    <button onclick="app.setTab('${t}')" class="pb-3 px-4 text-sm font-bold uppercase tracking-wide transition-colors ${state.activeTab === t ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'}">
+                        ${t === 'presets' ? '<i data-lucide="star" width="16" class="inline mb-1"></i> ' : ''}${t}
+                    </button>
+                `).join('');
+                lucide.createIcons();
+            },
+
+            renderPresets: () => {
+                const container = document.getElementById('presets-list');
+                container.innerHTML = '';
+                
+                ['basketball', 'football', 'baseball'].forEach(sportKey => {
+                    const sportPresets = PRESETS.filter(p => p.sport === sportKey);
+                    if(sportPresets.length === 0) return;
+                    
+                    const groupTitle = document.createElement('h4');
+                    groupTitle.className = "text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4";
+                    groupTitle.innerText = SPORTS[sportKey].label + ' Stars';
+                    container.appendChild(groupTitle);
+
+                    sportPresets.forEach(p => {
+                        const team = SPORTS[sportKey].teams.find(t => t.id === p.teamId);
+                        const btn = document.createElement('button');
+                        btn.className = "w-full flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-md transition-all text-left group mb-2";
+                        btn.onclick = () => app.loadPreset(p);
+                        btn.innerHTML = `
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-xs shrink-0" style="background-color: ${team ? team.primary : '#333'}">
+                                ${p.number}
+                            </div>
+                            <div>
+                                <div class="font-bold text-slate-800 group-hover:text-indigo-700">${p.name}</div>
+                                <div class="text-xs text-slate-500">${p.label} • ${team ? team.name : ''}</div>
+                            </div>
+                            <i data-lucide="chevron-right" class="ml-auto text-slate-300 group-hover:text-indigo-400" width="16"></i>
+                        `;
+                        container.appendChild(btn);
+                    });
+                });
+                lucide.createIcons();
+            },
+
+            renderSkinTones: () => {
+                const container = document.getElementById('skin-tone-container');
+                container.innerHTML = SKIN_TONES.map(color => `
+                    <button onclick="state.skinTone = '${color}'; app.setCustomChange(); app.renderSkinTones(); app.draw();" 
+                        class="w-10 h-10 rounded-full border-4 transition-transform hover:scale-110 ${state.skinTone === color ? 'border-indigo-600 shadow-md scale-110' : 'border-transparent'}"
+                        style="background-color: ${color}">
+                    </button>
+                `).join('');
+                // Add detected icon if custom
+                if(!SKIN_TONES.includes(state.skinTone)) {
+                    const btn = document.createElement('button');
+                    btn.className = "w-10 h-10 rounded-full border-4 border-indigo-600 shadow-md scale-110 relative";
+                    btn.style.backgroundColor = state.skinTone;
+                    btn.innerHTML = `<i data-lucide="scan-face" class="absolute inset-0 m-auto text-white/80" width="16"></i>`;
+                    container.prepend(btn);
+                    lucide.createIcons();
+                }
+            },
+
+            renderSports: () => {
+                const container = document.getElementById('sport-buttons');
+                container.innerHTML = Object.entries(SPORTS).map(([key, data]) => `
+                    <button onclick="state.sport = '${key}'; state.teamIndex=0; app.setCustomChange(); app.renderSports(); app.renderTeams(); app.draw();"
+                        class="py-3 px-2 rounded-xl text-sm font-bold border-2 transition-all ${state.sport === key ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}">
+                        ${data.label}
+                    </button>
+                `).join('');
+            },
+
+            renderTeams: () => {
+                const container = document.getElementById('team-list');
+                const teams = SPORTS[state.sport].teams;
+                container.innerHTML = teams.map((t, idx) => `
+                    <button onclick="state.teamIndex = ${idx}; app.setCustomChange(); app.renderTeams(); app.draw();"
+                        class="relative p-3 rounded-xl border-2 text-left transition-all overflow-hidden ${state.teamIndex === idx ? 'border-indigo-600 bg-white shadow-md' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'}">
+                        <div class="flex items-center gap-3 relative z-10">
+                            <div class="w-8 h-8 rounded-full border border-black/10 shadow-sm shrink-0" style="background-color: ${t.primary}">
+                                <div class="w-full h-full rounded-full opacity-50" style="background-color: ${t.secondary}; clip-path: polygon(50% 0, 100% 0, 100% 100%);"></div>
+                            </div>
+                            <span class="font-bold text-sm ${state.teamIndex === idx ? 'text-slate-800' : ''}">${t.name}</span>
+                        </div>
+                        ${state.teamIndex === idx ? '<i data-lucide="check-circle-2" class="absolute top-2 right-2 text-indigo-600 opacity-20" width="40"></i>' : ''}
+                    </button>
+                `).join('');
+                lucide.createIcons();
+            },
+
+            updateUI: () => {
+                // Hide all content tabs, show active
+                ['presets', 'body', 'jersey', 'finish'].forEach(t => {
+                    document.getElementById(`content-${t}`).classList.add('hidden');
+                });
+                document.getElementById(`content-${state.activeTab}`).classList.remove('hidden');
+
+                // Inputs
+                document.getElementById('input-name').value = state.name;
+                document.getElementById('input-number').value = state.number;
+                
+                // Pricing
+                app.updatePricing();
+
+                // View Mode Buttons
+                const btnFig = document.getElementById('btn-view-figure');
+                const btnBox = document.getElementById('btn-view-box');
+                const activeClass = "border-indigo-600 bg-indigo-50 text-indigo-700";
+                const inactiveClass = "border-slate-200 text-slate-500";
+                
+                if(state.viewMode === 'figure') {
+                    btnFig.className = `p-4 rounded-xl border-2 font-bold transition-all flex flex-col items-center gap-2 ${activeClass}`;
+                    btnBox.className = `p-4 rounded-xl border-2 font-bold transition-all flex flex-col items-center gap-2 ${inactiveClass}`;
+                } else {
+                    btnFig.className = `p-4 rounded-xl border-2 font-bold transition-all flex flex-col items-center gap-2 ${inactiveClass}`;
+                    btnBox.className = `p-4 rounded-xl border-2 font-bold transition-all flex flex-col items-center gap-2 ${activeClass}`;
+                }
+
+                // Image Controls
+                if(state.originalImage) {
+                    document.getElementById('image-controls').classList.remove('hidden');
+                    document.getElementById('preview-thumb').src = state.originalImage;
+                    document.getElementById('preview-thumb').classList.remove('hidden');
+                    document.getElementById('preview-icon').classList.add('hidden');
+                    document.getElementById('mode-face').classList.remove('hidden');
+                } else {
+                    document.getElementById('image-controls').classList.add('hidden');
+                    document.getElementById('mode-face').classList.add('hidden');
+                }
+            },
+
+            updatePricing: () => {
+                const price = state.isPreset ? 18.99 : 24.99;
+                const label = state.isPreset ? "Preset Figure" : "Custom Design";
+                const labelClass = state.isPreset ? "bg-green-100 text-green-700" : "bg-indigo-100 text-indigo-700";
+                
+                document.getElementById('price-total').innerText = `$${price}`;
+                document.getElementById('pay-btn-text').innerText = `Pay & Order ($${price})`;
+                
+                const lbl = document.getElementById('price-label');
+                lbl.innerText = label;
+                lbl.className = `font-bold px-3 py-1 rounded-full text-sm ${labelClass}`;
+            },
+
+            handlePayment: () => {
+                const price = state.isPreset ? 18.99 : 24.99;
+                alert(`Processing payment of $${price} for ${state.name} figure...`);
+                // Download logic
+                const canvas = document.getElementById('main-canvas');
+                const link = document.createElement('a');
+                link.download = `jersey-head-${state.name}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            },
+
+            // --- IMAGE PROCESSING ---
+            processImage: () => {
+                if(!state.originalImage) return;
+                
+                const img = new Image();
+                img.src = state.originalImage;
+                img.onload = () => {
+                    if(state.bgTolerance === 0) {
+                        state.processedImage = state.originalImage;
+                        app.draw();
+                        return;
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    
+                    // Tolerance Logic
+                    const bgR = data[0];
+                    const bgG = data[1];
+                    const bgB = data[2];
+                    const threshold = state.bgTolerance * 2;
+                    
+                    for(let i=0; i<data.length; i+=4) {
+                        const r = data[i]; const g = data[i+1]; const b = data[i+2];
+                        const dist = Math.sqrt((r-bgR)**2 + (g-bgG)**2 + (b-bgB)**2);
+                        if(dist < threshold) data[i+3] = 0;
+                    }
+                    
+                    ctx.putImageData(imageData, 0, 0);
+                    state.processedImage = canvas.toDataURL();
+                    app.draw();
+                };
+            },
+
+            // --- CANVAS DRAWING ---
+            draw: () => {
+                const canvas = document.getElementById('main-canvas');
+                if(!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const width = 600;
+                const height = 600;
+                canvas.width = width;
+                canvas.height = height;
+
+                // Round Rect Helper
+                const roundRect = (x, y, w, h, r, color) => {
+                    ctx.beginPath();
+                    ctx.moveTo(x + r, y);
+                    ctx.arcTo(x + w, y, x + w, y + h, r);
+                    ctx.arcTo(x + w, y + h, x, y + h, r);
+                    ctx.arcTo(x, y + h, x, y, r);
+                    ctx.arcTo(x, y, x + w, y, r);
+                    ctx.closePath();
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                };
+
+                const team = SPORTS[state.sport].teams[state.teamIndex];
+                const sportStyle = SPORTS[state.sport].jerseyStyle;
+
+                // Background (Dark Spotlight)
+                const gradient = ctx.createRadialGradient(width/2, height/2, 50, width/2, height/2, width * 0.8);
+                gradient.addColorStop(0, '#334155');
+                gradient.addColorStop(1, '#020617');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+
+                // Floor Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.beginPath();
+                ctx.ellipse(300, 500, 150, 40, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // BOX MODE
+                if (state.viewMode === 'box') {
+                    ctx.fillStyle = team.primary;
+                    ctx.fillRect(50, 50, 500, 500);
+                    ctx.fillStyle = '#ffffff';
+                    roundRect(80, 100, 440, 350, 20, '#fff');
+
+                    // --- BOX ACCESSORIES ---
+                    // Drawn BEHIND the figure (which comes next)
+                    if (state.sport === 'basketball') {
+                        // Backboard
+                        ctx.fillStyle = '#eee';
+                        ctx.fillRect(350, 120, 120, 80);
+                        ctx.lineWidth = 3; ctx.strokeStyle = '#d00'; ctx.strokeRect(350, 120, 120, 80);
+                        ctx.strokeRect(390, 170, 40, 30);
+                        // Hoop
+                        ctx.beginPath(); ctx.moveTo(410, 200); ctx.lineTo(440, 200);
+                        ctx.lineWidth = 4; ctx.strokeStyle = '#f00'; ctx.stroke();
+                        // Ball on floor
+                        ctx.beginPath(); ctx.arc(420, 400, 30, 0, Math.PI*2); ctx.fillStyle = '#cf5618'; ctx.fill();
+                        ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke();
+                    } else if (state.sport === 'football') {
+                        // Goal Post (Background)
+                        ctx.strokeStyle = '#fe0'; ctx.lineWidth = 8;
+                        ctx.beginPath();
+                        ctx.moveTo(350, 120); ctx.lineTo(350, 250); 
+                        ctx.moveTo(450, 120); ctx.lineTo(450, 250);
+                        ctx.moveTo(350, 250); ctx.lineTo(450, 250);
+                        ctx.moveTo(400, 250); ctx.lineTo(400, 450);
+                        ctx.stroke();
+                        // Ball on Tee
+                        ctx.beginPath(); ctx.ellipse(420, 420, 15, 25, 0, 0, Math.PI*2); ctx.fillStyle = '#593214'; ctx.fill();
+                    } else if (state.sport === 'baseball') {
+                        // Bat leaning
+                        ctx.save();
+                        ctx.translate(420, 350);
+                        ctx.rotate(0.2);
+                        ctx.fillStyle = '#d4a373';
+                        roundRect(0, 0, 15, 120, 5, '#d4a373');
+                        ctx.restore();
+                        // Ball
+                        ctx.beginPath(); ctx.arc(380, 420, 15, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
+                        ctx.strokeStyle = '#f00'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(380, 420, 10, -0.5, 1.5); ctx.stroke();
+                    }
+
+                    ctx.fillStyle = (team.secondary === '#FFFFFF' && team.primary === '#FFFFFF') ? '#000' : team.secondary;
+                    ctx.font = 'bold 40px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(team.name.toUpperCase(), 300, 90);
+                    
+                    ctx.font = 'bold 30px Arial';
+                    ctx.fillText(state.name.toUpperCase(), 300, 520);
+
+                    ctx.beginPath();
+                    ctx.arc(480, 500, 40, 0, Math.PI * 2);
+                    ctx.fillStyle = '#fff';
+                    ctx.fill();
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 30px Arial';
+                    ctx.fillText(state.number, 480, 510);
+                }
+
+                // FIGURE TRANSFORM
+                ctx.save();
+                if (state.viewMode === 'box') {
+                    ctx.translate(130, 120);
+                    ctx.scale(0.6, 0.6);
+                } else {
+                    ctx.translate(100, 50);
+                }
+
+                // Rotation Logic
+                const isBackView = state.rotation > 90 && state.rotation < 270;
+
+                // 1. LEGS
+                const pantsColor = team.secondary === '#FFFFFF' ? '#333' : team.primary;
+                const shoeColor = '#111';
+
+                if (state.sport === 'basketball') {
+                    roundRect(135, 350, 40, 75, 10, state.skinTone);
+                    roundRect(225, 350, 40, 75, 10, state.skinTone);
+                    roundRect(135, 405, 40, 15, 4, '#ffffff');
+                    roundRect(225, 405, 40, 15, 4, '#ffffff');
+                    roundRect(125, 420, 60, 30, 8, shoeColor);
+                    roundRect(215, 420, 60, 30, 8, shoeColor);
+                    roundRect(125, 340, 60, 50, 10, pantsColor);
+                    roundRect(215, 340, 60, 50, 10, pantsColor);
+                } else if (state.sport === 'baseball') {
+                    const pantColor = '#e5e7eb';
+                    roundRect(130, 350, 50, 75, 10, pantColor);
+                    roundRect(220, 350, 50, 75, 10, pantColor);
+                    ctx.fillStyle = '#374151'; ctx.fillRect(130, 350, 140, 10); // Belt
+                    roundRect(125, 420, 60, 30, 8, shoeColor);
+                    roundRect(215, 420, 60, 30, 8, shoeColor);
+                } else {
+                    roundRect(130, 350, 50, 80, 10, pantsColor);
+                    roundRect(125, 420, 60, 30, 10, shoeColor);
+                    roundRect(220, 350, 50, 80, 10, pantsColor);
+                    roundRect(215, 420, 60, 30, 10, shoeColor);
+                }
+
+                // 2. TORSO
+                const jerseyColor = team.primary === '#FFFFFF' ? '#f0f0f0' : team.primary;
+                const accentColor = team.secondary;
+
+                ctx.fillStyle = jerseyColor;
+                ctx.beginPath();
+                ctx.moveTo(130, 250); ctx.lineTo(270, 250); ctx.lineTo(260, 360); ctx.lineTo(140, 360); ctx.fill();
+
+                ctx.fillStyle = state.skinTone;
+                ctx.fillRect(175, 230, 50, 30); // Neck
+
+                // Arms
+                if (sportStyle === 'sleeveless') {
+                    roundRect(90, 250, 40, 100, 20, state.skinTone);
+                    roundRect(270, 250, 40, 100, 20, state.skinTone);
+                    roundRect(90, 320, 40, 15, 5, accentColor);
+                    roundRect(270, 320, 40, 15, 5, accentColor);
+                } else if (sportStyle === 'shoulders') {
+                    roundRect(90, 250, 40, 100, 20, state.skinTone);
+                    roundRect(90, 250, 40, 60, 10, jerseyColor);
+                    roundRect(270, 250, 40, 100, 20, state.skinTone);
+                    roundRect(270, 250, 40, 60, 10, jerseyColor);
+                } else {
+                    roundRect(90, 250, 40, 100, 20, state.skinTone);
+                    roundRect(80, 250, 50, 40, 10, jerseyColor);
+                    roundRect(270, 250, 50, 40, 10, jerseyColor);
+                }
+                roundRect(90, 340, 40, 40, 20, state.skinTone); // Hands
+                roundRect(270, 340, 40, 40, 20, state.skinTone);
+
+                // Ball (Front only)
+                if (!isBackView) {
+                    if (state.sport === 'basketball') {
+                        ctx.beginPath(); ctx.arc(110, 360, 35, 0, Math.PI*2); ctx.fillStyle = '#cf5618'; ctx.fill();
+                        ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(75, 360); ctx.lineTo(145, 360); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(110, 325); ctx.lineTo(110, 395); ctx.stroke();
+                    } else if (state.sport === 'baseball') {
+                        ctx.beginPath(); ctx.arc(160, 440, 20, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
+                        ctx.lineWidth = 1; ctx.strokeStyle = '#e0e0e0'; ctx.stroke();
+                        ctx.lineWidth = 2; ctx.strokeStyle = '#ff0000';
+                        ctx.beginPath(); ctx.arc(150, 440, 12, -0.5, 1.5); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(170, 440, 12, Math.PI-0.5, Math.PI+1.5); ctx.stroke();
+                    } else if (state.sport === 'football') {
+                        ctx.beginPath(); ctx.ellipse(290, 360, 25, 40, Math.PI/4, 0, 2*Math.PI); ctx.fillStyle = '#593214'; ctx.fill();
+                        ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.moveTo(280, 350); ctx.lineTo(300, 370); ctx.stroke();
+                    }
+                }
+
+                // JERSEY TEXT
+                ctx.fillStyle = accentColor;
+                ctx.textAlign = 'center';
+
+                if (isBackView) {
+                    ctx.font = 'bold 24px Arial';
+                    ctx.fillText(state.name.toUpperCase().substring(0, 12), 200, 280);
+                    ctx.font = 'bold 80px Arial';
+                    ctx.fillText(state.number, 200, 350);
+                } else {
+                    ctx.font = 'bold 24px Arial';
+                    ctx.fillText(team.name.toUpperCase(), 200, 280);
+                    ctx.font = 'bold 50px Arial';
+                    ctx.fillText(state.number, 200, 340);
+                }
+
+                // 3D HEAD
+                const headSize = 220;
+                const headX = 90;
+                const headY = 40;
+                const centerX = headX + headSize/2;
+                const centerY = headY + headSize/2;
+
+                // Neck Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath(); ctx.ellipse(200, 250, 50, 15, 0, 0, Math.PI*2); ctx.fill();
+
+                ctx.save();
+                const spherePath = new Path2D();
+                spherePath.arc(centerX, centerY, headSize/2, 0, Math.PI*2);
+                
+                // Sphere Base
+                const sphereGrad = ctx.createRadialGradient(centerX - 40, centerY - 40, 20, centerX, centerY, headSize/2);
+                sphereGrad.addColorStop(0, state.skinTone);
+                sphereGrad.addColorStop(1, state.skinTone);
+                ctx.fillStyle = sphereGrad;
+                ctx.fill(spherePath);
+                ctx.clip(spherePath);
+
+                // Face / Back of Head
+                if (!isBackView) {
+                    if (state.processedImage) {
+                        const img = new Image();
+                        img.src = state.processedImage;
+                        if (img.complete) {
+                            ctx.save();
+                            const defaultScale = Math.max(headSize/img.width, headSize/img.height);
+                            const finalScale = defaultScale * state.faceZoom;
+                            ctx.translate(centerX + state.facePos.x, centerY + state.facePos.y);
+                            ctx.scale(finalScale, finalScale);
+                            
+                            // --- SCULPTED EFFECT ---
+                            ctx.filter = 'grayscale(100%) contrast(1.5) brightness(1.1)';
+                            ctx.globalCompositeOperation = 'hard-light'; 
+                            ctx.globalAlpha = 0.6; 
+
+                            ctx.drawImage(img, -img.width/2, -img.height/2);
+                            ctx.restore();
+                        }
+                    } else {
+                        // Default Face with Rotation
+                        let eyeOffsetX = 0;
+                        if (state.rotation < 90) eyeOffsetX = state.rotation * 0.5;
+                        if (state.rotation > 270) eyeOffsetX = (state.rotation - 360) * 0.5;
+                        
+                        ctx.fillStyle = '#000';
+                        // Eyes
+                        ctx.beginPath();
+                        ctx.ellipse(centerX - 40 + eyeOffsetX, centerY + 10, 15, 20, 0, 0, Math.PI*2);
+                        ctx.ellipse(centerX + 40 + eyeOffsetX, centerY + 10, 15, 20, 0, 0, Math.PI*2);
+                        ctx.fill();
+                        
+                        // Reflections
+                        ctx.fillStyle = '#fff';
+                        ctx.beginPath();
+                        ctx.arc(centerX - 45 + eyeOffsetX, centerY + 5, 5, 0, Math.PI*2);
+                        ctx.arc(centerX + 35 + eyeOffsetX, centerY + 5, 5, 0, Math.PI*2);
+                        ctx.fill();
+
+                        // Nose
+                        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                        ctx.beginPath();
+                        ctx.arc(centerX + eyeOffsetX, centerY + 25, 4, 0, Math.PI*2);
+                        ctx.fill();
+
+                        // Smile
+                        ctx.strokeStyle = '#000';
+                        ctx.lineWidth = 3;
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.arc(centerX + eyeOffsetX, centerY + 30, 20, 0.2 * Math.PI, 0.8 * Math.PI);
+                        ctx.stroke();
+                    }
+                }
+
+                // 3D Overlay
+                const overlayGrad = ctx.createRadialGradient(centerX - 50, centerY - 50, 10, centerX, centerY, headSize/2);
+                overlayGrad.addColorStop(0, 'rgba(255,255,255,0.3)');
+                overlayGrad.addColorStop(0.7, 'rgba(0,0,0,0)');
+                overlayGrad.addColorStop(1, 'rgba(0,0,0,0.3)');
+                ctx.fillStyle = overlayGrad;
+                ctx.fill(spherePath);
+
+                ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.stroke(spherePath);
+
+                ctx.restore();
+                ctx.restore();
+            },
+
+            // --- EVENT LISTENERS ---
+            setupListeners: () => {
+                // Inputs
+                document.getElementById('input-name').oninput = (e) => { state.name = e.target.value; app.setCustomChange(); app.draw(); };
+                document.getElementById('input-number').oninput = (e) => { state.number = e.target.value; app.setCustomChange(); app.draw(); };
+                
+                // Sliders
+                document.getElementById('zoom-slider').oninput = (e) => { state.faceZoom = parseFloat(e.target.value); app.setCustomChange(); app.draw(); };
+                document.getElementById('tolerance-slider').oninput = (e) => { 
+                    state.bgTolerance = parseInt(e.target.value);
+                    document.getElementById('tolerance-label').innerText = state.bgTolerance > 0 ? "On" : "Off";
+                    app.setCustomChange(); 
+                    app.processImage(); 
+                };
+
+                // Canvas Interaction
+                const canvasContainer = document.getElementById('preview-area');
+                
+                canvasContainer.addEventListener('mousedown', (e) => {
+                    state.isDragging = true;
+                    state.lastMousePos = {x: e.clientX, y: e.clientY};
+                });
+                
+                window.addEventListener('mousemove', (e) => {
+                    if (!state.isDragging) return;
+                    const deltaX = e.clientX - state.lastMousePos.x;
+                    const deltaY = e.clientY - state.lastMousePos.y;
+
+                    if (state.interactionMode === 'face' && state.processedImage) {
+                        state.facePos.x += deltaX;
+                        state.facePos.y += deltaY;
+                    } else {
+                        // Rotation
+                        let newRot = state.rotation + deltaX;
+                        if (newRot < 0) newRot += 360;
+                        if (newRot >= 360) newRot -= 360;
+                        state.rotation = newRot;
+                    }
+                    state.lastMousePos = {x: e.clientX, y: e.clientY};
+                    app.draw();
+                });
+
+                window.addEventListener('mouseup', () => {
+                    state.isDragging = false;
+                });
+
+                // File Upload
+                const handleFile = (e) => {
+                    app.setCustomChange();
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (evt) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                // Downscale logic here mirroring original
+                                const maxDim = 800;
+                                let w = img.width, h = img.height;
+                                if (w > maxDim || h > maxDim) {
+                                    const ratio = Math.min(maxDim/w, maxDim/h);
+                                    w*=ratio; h*=ratio;
+                                }
+                                const c = document.createElement('canvas');
+                                c.width=w; c.height=h;
+                                const cx = c.getContext('2d');
+                                cx.drawImage(img,0,0,w,h);
+                                
+                                // Face Scan Logic
+                                const sampleSize = Math.min(w, h) * 0.2;
+                                const sx = (w - sampleSize) / 2;
+                                const sy = (h - sampleSize) / 2;
+                                try {
+                                    const d = cx.getImageData(sx, sy, sampleSize, sampleSize).data;
+                                    let r=0,g=0,b=0,count=0;
+                                    for(let i=0; i<d.length; i+=40) {
+                                        r+=d[i]; g+=d[i+1]; b+=d[i+2]; count++;
+                                    }
+                                    if(count>0) {
+                                        const toHex = (c) => { const hex=Math.round(c).toString(16); return hex.length==1?"0"+hex:hex;};
+                                        state.skinTone = "#" + toHex(r/count) + toHex(g/count) + toHex(b/count);
+                                        app.renderSkinTones();
+                                    }
+                                } catch(e){}
+
+                                state.originalImage = c.toDataURL();
+                                state.processedImage = state.originalImage;
+                                state.faceZoom = 1;
+                                state.facePos = {x:0, y:0};
+                                state.bgTolerance = 0;
+                                document.getElementById('tolerance-slider').value = 0;
+                                
+                                app.setInteractionMode('face');
+                                app.updateUI();
+                                app.draw();
+                            };
+                            img.src = evt.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+
+                document.getElementById('file-upload').addEventListener('change', handleFile);
+                document.getElementById('btn-upload').addEventListener('change', handleFile);
+            }
+        };
+
+        // Start App
+        window.onload = app.init;
+    </script>
+</body>
+</html>
